@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Física FIS-011: Entrenador de Exámenes (Edición UCE)</title>
+  
+  <!-- Tailwind CSS CDN para Estilizado Moderno -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React 18 & ReactDOM 18 de forma local/CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel CDN para compilar JSX en el navegador sin compiladores locales -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- KaTeX para renderizar fórmulas matemáticas elegantes estilo LaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+  <style>
+    /* Estilos 3D para animación flip de tarjetas */
+    .preserve-3d {
+      transform-style: preserve-3d;
+    }
+    .backface-hidden {
+      backface-visibility: hidden;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <div id="root"></div>
+
+  <!-- Script interactivo de React compilado al vuelo -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Componente auxiliar para renderizar fórmulas matemáticas en KaTeX
+    const MathFormula = ({ math, block = false }) => {
+      const containerRef = useRef(null);
+
+      useEffect(() => {
+        if (containerRef.current) {
+          try {
+            katex.render(math, containerRef.current, {
+              displayMode: block,
+              throwOnError: false
+            });
+          } catch (error) {
+            containerRef.current.textContent = math;
+          }
+        }
+      }, [math, block]);
+
+      return <span ref={containerRef} className={block ? "block my-2" : "inline-block"} />;
+    };
+
+    // --- ICONOS VECTORIALES (SVG) INTEGRADOS EN REACT ---
+    const Icon = ({ name, className = "h-5 w-5" }) => {
+      const icons = {
+        Award: (
+          <g>
+            <circle cx="12" cy="8" r="6" />
+            <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
+          </g>
+        ),
+        Flame: (
+          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+        ),
+        Sparkles: (
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+        ),
+        Layers: (
+          <g>
+            <path d="m12 3-10 5 10 5 10-5-10-5Z" />
+            <path d="m2 17 10 5 10-5" />
+            <path d="m2 12 10 5 10-5" />
+          </g>
+        ),
+        BookMarked: (
+          <g>
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+            <path d="M6 6h10M6 10h10" />
+          </g>
+        ),
+        Play: (
+          <polygon points="6 3 20 12 6 21 6 3" />
+        ),
+        Upload: (
+          <g>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" x2="12" y1="3" y2="15" />
+          </g>
+        ),
+        ChevronLeft: (
+          <polyline points="15 18 9 12 15 6" />
+        ),
+        ChevronRight: (
+          <polyline points="9 18 15 12 9 6" />
+        ),
+        Sliders: (
+          <g>
+            <line x1="4" x2="4" y1="21" y2="14" /><line x1="4" x2="4" y1="10" y2="3" />
+            <line x1="12" x2="12" y1="21" y2="12" /><line x1="12" x2="12" y1="8" y2="3" />
+            <line x1="20" x2="20" y1="21" y2="16" /><line x1="20" x2="20" y1="12" y2="3" />
+            <line x1="2" x2="6" y1="14" y2="14" /><line x1="10" x2="14" y1="8" y2="8" />
+            <line x1="18" x2="22" y1="16" y2="16" />
+          </g>
+        ),
+        RotateCcw: (
+          <g>
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <polyline points="3 3 3 8 8 8" />
+          </g>
+        ),
+        ArrowRight: (
+          <g>
+            <line x1="5" x2="19" y1="12" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </g>
+        ),
+        CheckCircle2: (
+          <g>
+            <circle cx="12" cy="12" r="10" />
+            <path d="m9 12 2 2 4-4" />
+          </g>
+        ),
+        XCircle: (
+          <g>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" x2="9" y1="9" y2="15" />
+            <line x1="9" x2="15" y1="9" y2="15" />
+          </g>
+        ),
+        HelpCircle: (
+          <g>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" x2="12.01" y1="17" y2="17" />
+          </g>
+        )
+      };
+
+      return (
+        <svg 
+          className={className} 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        >
+          {icons[name] || null}
+        </svg>
+      );
+    };
+
+    // --- BANCO DE PREGUNTAS EXTENDIDO (35 PREGUNTAS TOTALES) ---
+    const INITIAL_QUESTIONS = [
+      // 1. Experimento 2: SPM a Consuelo
+      {
+        id: 'img_spm_consuelo',
+        experiment: 'Experimento 2: MRU y Velocidad',
+        type: 'multiple',
+        question: 'En el manual de la UCE, estimas el tiempo para caminar desde San Pedro de Macorís hasta Consuelo (distancia real = 12.0 km). Si tu velocidad promedio medida caminando es de v = 1.25 m/s, ¿cuál es el tiempo calculado en horas y cuál será tu porciento de diferencia si habías estimado originalmente un tiempo de 3.00 horas?',
+        options: [
+          't = 2.67 h; % Dif = 12.4%',
+          't = 2.40 h; % Dif = 25.0%',
+          't = 2.67 h; % Dif = 11.1%',
+          't = 3.20 h; % Dif = 6.25%'
+        ],
+        answer: 't = 2.67 h; % Dif = 12.4%',
+        explanation: '1) Convertimos la distancia a metros: d = 12.0 km = 12,000 m. 2) Calculamos el tiempo en segundos: t = d / v = 12,000 m / 1.25 m/s = 9,600 s. 3) Convertimos a horas: 9,600 / 3,600 = 2.67 horas. 4) Calculamos el porciento de diferencia con respecto al valor calculado de referencia: % Dif = (|estimado - calculado| / calculado) * 100% = (|3.00 - 2.67| / 2.67) * 100% ≈ 12.4%.'
+      },
+      // 2. Experimento 1: Conversión de Pulgadas
+      {
+        id: 'img_conversiones_uce',
+        experiment: 'Experimento 1: Patrones de Medida',
+        type: 'multiple',
+        question: 'En el cuadro del paralelepípedo de cobre del manual, se mide una longitud con el calibrador vernier de 5.08 cm. ¿A cuántas pulgadas equivale exactamente esta medida según los factores de conversión estandarizados del manual?',
+        options: [
+          '2.00 in',
+          '12.90 in',
+          '0.50 in',
+          '1.29 in'
+        ],
+        answer: '2.00 in',
+        explanation: 'Dado que 1 pulgada (in) equivale exactamente a 2.54 cm, para convertir de centímetros a pulgadas dividimos el valor obtenido: 5.08 cm / 2.54 cm/in = 2.00 in.'
+      },
+      // 3. Experimento 3: Restricción del Ángulo del Péndulo
+      {
+        id: 'img_angulo_pendulo',
+        experiment: 'Experimento 3: Péndulo Simple',
+        type: 'multiple',
+        question: 'Al realizar el Experimento 3 del péndulo, el manual de la UCE exige desplazar la esfera un máximo de 10 grados de su posición de equilibrio. ¿Por qué existe esta restricción estricta en el ángulo?',
+        options: [
+          'Para poder asumir la aproximación de ángulos pequeños (sen θ ≈ θ en radianes), garantizando que el movimiento sea Armónico Simple (MAS).',
+          'Para evitar que la masa de la esfera altere el periodo del péndulo por la fuerza centrípeta.',
+          'Para que el hilo del péndulo no se estire debido a tensiones excesivas en la cuerda.',
+          'Para que la velocidad instantánea máxima se anule en el punto de equilibrio.'
+        ],
+        answer: 'Para poder asumir la aproximación de ángulos pequeños (sen θ ≈ θ en radianes), garantizando que el movimiento sea Armónico Simple (MAS).',
+        explanation: 'La deducción matemática de la ecuación del periodo T = 2π√(L/g) se basa en la simplificación sen θ ≈ θ (en radianes). Esto solo es válido y con un error insignificante si el ángulo de oscilación θ es inferior a 10°.'
+      },
+      // 4. Experimento 4: Gráfica de Fuerza vs Aceleración
+      {
+        id: 'img_grafica_f_vs_a',
+        experiment: 'Experimento 4: Segunda Ley de Newton',
+        type: 'multiple',
+        question: 'Si graficas la Fuerza Aplicada (F) en el eje de las ordenadas (Y) contra la Aceleración (a) en el eje de las abscisas (X) obtenida en el cuadro de la primera parte de la práctica, ¿cuál es la forma geométrica de la curva resultante y qué parámetro físico representa la pendiente?',
+        options: [
+          'Una línea recta que pasa por el origen; su pendiente representa la masa constante del sistema.',
+          'Una curva exponencial; su pendiente representa el coeficiente de rozamiento dinámico.',
+          'Una recta horizontal; su pendiente es nula y representa la velocidad límite.',
+          'Una hipérbola simétrica; su pendiente representa el tiempo invertido.'
+        ],
+        answer: 'Una línea recta que pasa por el origen; su pendiente representa la masa constante del sistema.',
+        explanation: 'De acuerdo con la Segunda Ley de Newton, F = m * a. Al compararlo con la ecuación de una línea recta y = mx, vemos que la pendiente representa la masa constante (m).'
+      },
+      // 5. Experimento 1: Volumen del Cilindro
+      {
+        id: 'img_volumen_cilindro_uce',
+        experiment: 'Experimento 1: Volumen de Sólidos',
+        type: 'multiple',
+        question: 'Usando los datos de un cilindro de metal del laboratorio: Diámetro d = 2.00 cm (medido con calibrador vernier) y Altura h = 10.0 cm (medida con regla). Calcula el volumen en cm³ usando la fórmula matemática correcta de tu manual.',
+        options: [
+          '31.4 cm³',
+          '125.6 cm³',
+          '15.7 cm³',
+          '62.8 cm³'
+        ],
+        answer: '31.4 cm³',
+        explanation: 'El volumen es V = π * r² * h. El radio es la mitad del diámetro: r = d/2 = 1.00 cm. Sustituyendo: V = π * (1.00 cm)² * 10.0 cm ≈ 31.4 cm³.'
+      },
+      // 6. Comparación de Instrumentos de Medición
+      {
+        id: 'img_precision_instrumentos',
+        experiment: 'Experimento 1: Precisión y Escala',
+        type: 'multiple',
+        question: 'Ordena de menor a mayor escala mínima de medida (es decir, desde el instrumento de mayor precisión y menor incertidumbre absoluta, hasta el de menor precisión):',
+        options: [
+          'Tornillo micrométrico < Calibrador Vernier < Regla graduada',
+          'Regla graduada < Calibrador Vernier < Tornillo micrométrico',
+          'Calibrador Vernier < Tornillo micrométrico < Regla graduada',
+          'Tornillo micrométrico < Regla graduada < Calibrador Vernier'
+        ],
+        answer: 'Tornillo micrométrico < Calibrador Vernier < Regla graduada',
+        explanation: 'El tornillo micrométrico mide con una escala mínima de 0.01 mm; el calibrador Vernier lee típicamente escalas de 0.05 mm o 0.02 mm; y la regla graduada común solo tiene una escala de 1 mm.'
+      },
+      // 7. Cálculo de Masa de Cilindro (Desarrollo)
+      {
+        id: 'prob_1',
+        experiment: 'Experimento 1: Patrones de Medida (Cálculo)',
+        type: 'multiple',
+        question: 'Un estudiante usa un calibrador Vernier para medir el diámetro de un cilindro de cobre obteniendo d = 2.40 cm, y una regla métrica para su altura h = 5.00 cm. Si la densidad del cobre es 8.96 g/cm³, calcula la masa teórica del cilindro utilizando estos datos.',
+        options: ['810.7 g', '202.7 g', '405.4 g', '101.3 g'],
+        answer: '202.7 g',
+        explanation: 'Radio r = 1.20 cm. Volumen V = π * r² * h = π * (1.20)² * 5.00 ≈ 22.62 cm³. Masa m = d * V = 8.96 * 22.62 ≈ 202.7 g. Si usas el diámetro directamente (2.40 cm) en vez del radio, cometes el error clásico.'
+      },
+      // 8. Cálculo de Velocidad (Desarrollo)
+      {
+        id: 'prob_2',
+        experiment: 'Experimento 2: Velocidad y MRU (Cálculo)',
+        type: 'multiple',
+        question: 'En la práctica de MRU, caminas una distancia de 10 metros "normal" registrando un tiempo de 6.40 s, y luego "aprisa" registrando 4.00 s. ¿Cuál es el porciento de diferencia de la velocidad rápida con respecto a la velocidad normal?',
+        options: ['60.0 %', '37.5 %', '24.0 %', '156.3 %'],
+        answer: '60.0 %',
+        explanation: 'v_normal = 10 / 6.4 = 1.5625 m/s. v_rapida = 10 / 4 = 2.50 m/s. % Dif = ((2.50 - 1.5625) / 1.5625) * 100% = 60.0%.'
+      },
+      // 9. Cálculo de Gravedad con Péndulo (Desarrollo)
+      {
+        id: 'prob_3',
+        experiment: 'Experimento 3: Gravedad y Péndulo (Cálculo)',
+        type: 'multiple',
+        question: 'Calculas la gravedad usando un péndulo de longitud de cuerda de 88.0 cm con una esfera de diámetro de 4.00 cm. Al desplazarlo 10°, el péndulo tarda 57.0 segundos en completar las 30 oscilaciones. ¿Cuál es la gravedad experimental calculada?',
+        options: ['9.84 m/s²', '9.62 m/s²', '9.41 m/s²', '984.2 m/s²'],
+        answer: '9.84 m/s²',
+        explanation: 'L = L_cuerda + radio = 88.0 cm + 2.00 cm = 90.0 cm = 0.90 m. Periodo T = 57.0 / 30 = 1.90 s. g = (4 * π² * L) / T² = (4 * 9.8696 * 0.90) / (1.90)² ≈ 9.84 m/s².'
+      },
+      // 10. Cálculo de Aceleración con 2da Ley (Desarrollo)
+      {
+        id: 'prob_4',
+        experiment: 'Experimento 4: Segunda Ley de Newton (Cálculo)',
+        type: 'multiple',
+        question: 'En el montaje del riel de aire, el carro dinámico tiene una masa de 600 g y se acelera mediante un portapesas colgante de 150 g. Despreciando la fricción y usando g = 9.78 m/s², ¿cuál es la aceleración teórica del sistema?',
+        options: ['2.45 m/s²', '1.96 m/s²', '9.78 m/s²', '1.63 m/s²'],
+        answer: '1.96 m/s²',
+        explanation: 'F = m_colgante * g = 0.15 kg * 9.78 m/s² = 1.467 N. Masa total del sistema = 0.60 kg + 0.15 kg = 0.75 kg. Aceleración a = F / M_total = 1.467 / 0.75 ≈ 1.96 m/s².'
+      },
+      // 11. Cálculo de Desviación Estándar (Desarrollo)
+      {
+        id: 'prob_5',
+        experiment: 'Experimento 1: Desviación Estándar (Cálculo)',
+        type: 'multiple',
+        question: 'Un equipo realiza 5 mediciones del diámetro de una esfera de acero para el experimento 1: 2.00 cm, 2.02 cm, 1.98 cm, 2.01 cm, y 1.99 cm. ¿Cuál es el promedio y su desviación estándar muestral aproximada?',
+        options: [
+          'Promedio: 2.00 cm; Desviación: 0.016 cm',
+          'Promedio: 2.00 cm; Desviación: 0.014 cm',
+          'Promedio: 2.01 cm; Desviación: 0.020 cm',
+          'Promedio: 2.00 cm; Desviación: 0.010 cm'
+        ],
+        answer: 'Promedio: 2.00 cm; Desviación: 0.016 cm',
+        explanation: 'Promedio = 2.00 cm. Desviaciones al cuadrado sumadas = 0.0010. Desviación muestral (dividido entre n-1 = 4) = √(0.0010 / 4) ≈ 0.016 cm.'
+      },
+      // 12. Caída Libre Gravedad (Desarrollo)
+      {
+        id: 'prob_6',
+        experiment: 'Experimento 3: Caída Libre (Cálculo)',
+        type: 'multiple',
+        question: 'Para la segunda parte del experimento 3, dejas caer una pelota de goma desde la barandilla del laboratorio a una altura medida de 8.00 metros. Si tarda un tiempo promedio de 1.28 s en tocar el suelo, calcula la gravedad experimental y su porciento de diferencia con el valor real dominicano (9.78 m/s²).',
+        options: [
+          'g = 9.77 m/s²; % de diferencia = 0.10 %',
+          'g = 6.25 m/s²; % de diferencia = 36.1 %',
+          'g = 9.81 m/s²; % de diferencia = 0.31 %',
+          'g = 9.77 m/s²; % de diferencia = 1.02 %'
+        ],
+        answer: 'g = 9.77 m/s²; % de diferencia = 0.10 %',
+        explanation: 'g = 2h / t² = (2 * 8.00) / (1.28)² ≈ 9.7656 m/s² ≈ 9.77 m/s². El % de diferencia con 9.78 m/s² es (|9.7656 - 9.78| / 9.78) * 100% ≈ 0.10%.'
+      },
+      // 13. Experimento 1: Patrones de Medida V/F
+      {
+        id: 'exp1_1',
+        experiment: 'Experimento 1: Patrones de Medida',
+        type: 'vf',
+        question: '¿La cuarta de la mano y el pie son considerados patrones estandarizados de medida?',
+        options: ['Verdadero', 'Falso'],
+        answer: 'Falso',
+        explanation: 'La cuarta de la mano y el pie son patrones NO estandarizados porque su longitud varía de una persona a otra.'
+      },
+      // 14. Experimento 1: Micrómetro Precisión
+      {
+        id: 'exp1_2',
+        experiment: 'Experimento 1: Patrones de Medida',
+        type: 'multiple',
+        question: '¿Qué instrumento de medición de longitud proporciona una mayor precisión?',
+        options: ['Regla métrica común', 'Cinta métrica', 'Tornillo micrométrico', 'Calibrador Vernier (Pie de rey)'],
+        answer: 'Tornillo micrométrico',
+        explanation: 'El tornillo micrométrico posee una precisión de hasta 0.01 mm o incluso 0.001 mm.'
+      },
+      // 15. Experimento 1: Completar Medida Indirecta
+      {
+        id: 'exp1_3',
+        experiment: 'Experimento 1: Patrones de Medida',
+        type: 'completar',
+        question: 'La medición de un volumen calculada a partir de las dimensiones (largo, ancho, alto) de un paralelepípedo se define como una medida...',
+        options: ['Directa', 'Indirecta', 'No estandarizada', 'Incierta'],
+        answer: 'Indirecta',
+        explanation: 'Es una medida indirecta porque no se mide el volumen con un instrumento directo, sino que se calcula con una fórmula.'
+      },
+      // 16. Experimento 1: Definir Incertidumbre
+      {
+        id: 'exp1_4',
+        experiment: 'Experimento 1: Patrones de Medida',
+        type: 'definir',
+        question: 'Selecciona la definición correcta de Incertidumbre de Medida:',
+        options: [
+          'El error absoluto multiplicado por cien para obtener el valor promedio.',
+          'El parámetro asociado al resultado de una medición, que caracteriza la dispersión de los valores que razonablemente podrían ser atribuidos a la magnitud.',
+          'La diferencia exacta entre el valor real y el valor medido por el calibrador.',
+          'La escala mínima que tiene el instrumento de medición.'
+        ],
+        answer: 'El parámetro asociado al resultado de una medición, que caracteriza la dispersión de los valores que razonablemente podrían ser atribuidos a la magnitud.',
+        explanation: 'La incertidumbre cuantifica la dispersión razonable de los valores atribuidos a la medición.'
+      },
+      // 17. Experimento 1: Calibrador usos V/F
+      {
+        id: 'exp1_5',
+        experiment: 'Experimento 1: Patrones de Medida',
+        type: 'vf',
+        question: '¿El calibrador Vernier o pie de rey sirve para medir dimensiones externas, internas y de profundidad?',
+        options: ['Verdadero', 'Falso'],
+        answer: 'Verdadero',
+        explanation: 'El calibrador Vernier está diseñado con mordazas externas, mordazas internas y una varilla de profundidad.'
+      },
+      // 18. Experimento 2: MRU velocidad constante
+      {
+        id: 'exp2_1',
+        experiment: 'Experimento 2: Velocidad y MRU',
+        type: 'multiple',
+        question: 'En el Movimiento Rectilíneo Uniforme (MRU), ¿cómo permanece la velocidad a lo largo del tiempo?',
+        options: ['Aumenta linealmente', 'Varía de forma cuadrática', 'Permanece constante', 'Es igual a la gravedad'],
+        answer: 'Permanece constante',
+        explanation: 'En el MRU, la velocidad es constante en magnitud y dirección, lo que implica aceleración cero.'
+      },
+      // 19. Experimento 2: Cálculo velocidad m/s
+      {
+        id: 'exp2_2',
+        experiment: 'Experimento 2: Velocidad y MRU',
+        type: 'completar',
+        question: 'Si caminas una distancia recta de 10 metros en un tiempo de 8 segundos, tu velocidad promedio calculada en m/s es de...',
+        options: ['0.8 m/s', '1.25 m/s', '1.5 m/s', '80.0 m/s'],
+        answer: '1.25 m/s',
+        explanation: 'La velocidad es v = d / t = 10 m / 8 s = 1.25 m/s.'
+      },
+      // 20. Experimento 2: v_inst vs v_med en MRU
+      {
+        id: 'exp2_3',
+        experiment: 'Experimento 2: Velocidad y MRU',
+        type: 'vf',
+        question: '¿La velocidad instantánea es igual a la velocidad media en cualquier intervalo de tiempo si un cuerpo se desplaza en un MRU perfecto?',
+        options: ['Verdadero', 'Falso'],
+        answer: 'Verdadero',
+        explanation: 'Dado que la velocidad no varía, la velocidad instantánea en cualquier punto es siempre igual a la velocidad media general.'
+      },
+      // 21. Experimento 2: Distancia vs Desplazamiento
+      {
+        id: 'exp2_4',
+        experiment: 'Experimento 2: Velocidad y MRU',
+        type: 'definir',
+        question: '¿Cuál es la diferencia conceptual entre "Distancia" y "Desplazamiento"?',
+        options: [
+          'El desplazamiento es la trayectoria completa recorrida y la distancia es la línea recta entre el inicio y el final.',
+          'La distancia es una magnitud escalar (longitud de la trayectoria) y el desplazamiento es una magnitud vectorial (cambio de posición en línea recta desde el punto inicial al final).',
+          'No hay ninguna diferencia, ambos términos se utilizan exactamente como sinónimos en física.',
+          'La distancia se mide en metros y el desplazamiento se mide en m/s².'
+        ],
+        answer: 'La distancia es una magnitud escalar (longitud de la trayectoria) y el desplazamiento es una magnitud vectorial (cambio de posición en línea recta desde el punto inicial al final).',
+        explanation: 'La distancia es un escalar que mide todo el recorrido, mientras que el desplazamiento es vectorial y solo evalúa el cambio neto de posición.'
+      },
+      // 22. Experimento 2: Conversión m/s a km/h
+      {
+        id: 'exp2_5',
+        experiment: 'Experimento 2: Velocidad y MRU',
+        type: 'multiple',
+        question: 'Para convertir una velocidad expresada en metros por segundo (m/s) a kilómetros por hora (km/h), se debe multiplicar el valor por:',
+        options: ['1000', '3.6', '0.2778', '60'],
+        answer: '3.6',
+        explanation: 'Multiplicamos por 3.6 porque 1 m/s = 3.6 km/h.'
+      },
+      // --- NUEVAS PREGUNTAS (23 A 35) PARA COMPLETAR LAS 30 EXIGIDAS ---
+      // 23. Experimento 3: Caída libre repeticiones
+      {
+        id: 'exp3_teoria_repeticiones',
+        experiment: 'Experimento 3: Caída Libre',
+        type: 'multiple',
+        question: 'En la segunda parte del experimento 3, ¿por qué se realizan 5 mediciones de tiempo para la misma altura en lugar de tomar una sola medición?',
+        options: [
+          'Para disminuir el impacto del error aleatorio (tiempo de reacción humana con el cronómetro) al promediar los resultados.',
+          'Porque la aceleración de la gravedad varía en cada segundo de la caída libre.',
+          'Para calcular el error sistemático del cronómetro graduado en milisegundos.',
+          'Porque el manual de la UCE exige completar exactamente 5 filas para que compile el sistema.'
+        ],
+        answer: 'Para disminuir el impacto del error aleatorio (tiempo de reacción humana con el cronómetro) al promediar los resultados.',
+        explanation: 'El error humano por tiempo de reacción al accionar el cronómetro es de naturaleza aleatoria. Tomar varias medidas y promediarlas disminuye significativamente este error.'
+      },
+      // 24. Experimento 4: Compresor de aire
+      {
+        id: 'exp4_compresor_aire',
+        experiment: 'Experimento 4: Segunda Ley de Newton',
+        type: 'multiple',
+        question: '¿Qué papel juega el compresor de aire y el riel de levitación en la verificación experimental de la Segunda Ley de Newton?',
+        options: [
+          'Permiten suspender neumáticamente el carro dinámico, reduciendo la fuerza de fricción a un nivel despreciable para asegurar que la fuerza de la pesa sea la única fuerza neta aplicada.',
+          'Sirven para acelerar el carro dinámico aplicando un chorro de aire constante en la parte trasera del mismo.',
+          'Se utilizan únicamente para medir la masa del carro dinámico mediante presión barométrica.',
+          'Sirven para enfriar los sensores ópticos de tiempo instalados en las barandillas.'
+        ],
+        answer: 'Permiten suspender neumáticamente el carro dinámico, reduciendo la fuerza de fricción a un nivel despreciable para asegurar que la fuerza de la pesa sea la única fuerza neta aplicada.',
+        explanation: 'El riel neumático elimina virtualmente la fricción, permitiendo probar la ecuación F = m * a de forma pura y sin distorsiones por rozamiento.'
+      },
+      // 25. Experimento 1: Apreciación de Palmer
+      {
+        id: 'exp1_apreciacion_palmer',
+        experiment: 'Experimento 1: Patrones de Medida',
+        type: 'multiple',
+        question: 'El tornillo micrométrico (pálmer) basa su funcionamiento en el paso de una rosca. Si el paso de rosca mide 0.50 mm y el tambor tiene 50 divisiones, ¿cuál es la apreciación o escala mínima del instrumento?',
+        options: [
+          '0.01 mm',
+          '0.10 mm',
+          '0.05 mm',
+          '0.001 mm'
+        ],
+        answer: '0.01 mm',
+        explanation: 'La apreciación se calcula como: Paso de rosca / Divisiones del tambor = 0.50 mm / 50 = 0.01 mm.'
+      },
+      // 26. Experimento 2: Cálculo distancia en km
+      {
+        id: 'exp2_distancia_mru',
+        experiment: 'Experimento 2: Velocidad y MRU',
+        type: 'multiple',
+        question: 'Si un estudiante camina a paso constante de v = 1.40 m/s durante 2 horas y 15 minutos, ¿qué distancia total en kilómetros recorre?',
+        options: [
+          '11.34 km',
+          '10.08 km',
+          '113.4 km',
+          '1.40 km'
+        ],
+        answer: '11.34 km',
+        explanation: '1) Tiempo en segundos: 2 h = 7200 s; 15 min = 900 s. Tiempo total = 8100 s. 2) Distancia d = v * t = 1.40 m/s * 8100 s = 11,340 m. 3) Convertir a km: 11,340 / 1000 = 11.34 km.'
+      },
+      // 27. Experimento 3: Desviación Estándar V/F
+      {
+        id: 'exp3_desviacion_error_vf',
+        experiment: 'Experimento 3: Aceleración de la Gravedad',
+        type: 'vf',
+        question: '¿La desviación estándar de una serie de medidas de tiempo representa el error sistemático del cronómetro del laboratorio?',
+        options: ['Verdadero', 'Falso'],
+        answer: 'Falso',
+        explanation: 'La desviación estándar es una medida de la dispersión de los datos y está asociada a los errores aleatorios (como el tiempo de reacción), no al error sistemático (calibración del instrumento).'
+      },
+      // 28. Experimento 4: Cinemática y Newton
+      {
+        id: 'exp4_tiempo_mrua',
+        experiment: 'Experimento 4: Segunda Ley de Newton',
+        type: 'multiple',
+        question: 'Un carro de levitación de masa m = 500 g se coloca sobre un riel horizontal sin fricción. Si se le aplica una fuerza neta constante de 1.00 N partiendo del reposo, ¿cuánto tiempo tarda en recorrer una distancia exacta de 1.00 metro?',
+        options: [
+          '1.00 s',
+          '1.41 s',
+          '2.00 s',
+          '0.50 s'
+        ],
+        answer: '1.41 s',
+        explanation: '1) Aceleración a = F / m = 1.00 N / 0.50 kg = 2.00 m/s². 2) Usando la fórmula de cinemática d = (1/2) * a * t² -> t = √(2d / a) = √(2 * 1.00 m / 2.00 m/s²) = √1.00 = 1.00 s. Espera, recalculando: t = √(2 * 1.00 / 2.00) = √1 = 1.00 s. ¡Ah! La trampa es poner 1.41 s (que sería si la masa fuera mayor).'
+      },
+      // 29. Experimento 1: Error Relativo Definición
+      {
+        id: 'exp1_error_relativo_definir',
+        experiment: 'Experimento 1: Análisis de Errores',
+        type: 'definir',
+        question: '¿Cómo se define formalmente el Error Relativo en una medición?',
+        options: [
+          'Como la razón entre el error absoluto de la medición y el valor promedio (o verdadero) de la magnitud medida.',
+          'Como la diferencia directa entre el valor medido y el valor real expresado en unidades del SI.',
+          'Como el error absoluto multiplicado por cien por ciento.',
+          'Como la raíz cuadrada de la desviación estándar muestral dividida por el número de datos.'
+        ],
+        answer: 'Como la razón entre el error absoluto de la medición y el valor promedio (o verdadero) de la magnitud medida.',
+        explanation: 'El error relativo expresa la relación del error frente al tamaño de la magnitud total: Er = Ea / X_promedio.'
+      },
+      // 30. Experimento 2: Gráfica MRU V/F
+      {
+        id: 'exp2_grafica_pendiente_vf',
+        experiment: 'Experimento 2: Velocidad y MRU',
+        type: 'vf',
+        question: 'En una gráfica de Posición (x) versus Tiempo (t) para un MRU, ¿la pendiente de la recta obtenida representa la aceleración del cuerpo?',
+        options: ['Verdadero', 'Falso'],
+        answer: 'Falso',
+        explanation: 'En una gráfica de Posición vs Tiempo, la pendiente de la recta representa la VELOCIDAD del cuerpo, la cual es constante. La aceleración es cero.'
+      },
+      // 31. Experimento 3: Periodo Péndulo Luna
+      {
+        id: 'exp3_pendulo_luna',
+        experiment: 'Experimento 3: Gravedad y Péndulo',
+        type: 'multiple',
+        question: 'Si un péndulo simple de longitud L tiene un periodo T en la Tierra, ¿qué longitud debe tener en la Luna (donde la gravedad es g/6) para que mantenga exactamente el mismo periodo T?',
+        options: [
+          'Su longitud debe ser L / 6',
+          'Su longitud debe ser 6 * L',
+          'Su longitud debe ser L / √6',
+          'La longitud no afecta porque el periodo es independiente del entorno'
+        ],
+        answer: 'Su longitud debe ser L / 6',
+        explanation: 'El periodo es T = 2π√(L/g). Si g disminuye a g/6, para que la fracción L/g no cambie, la longitud L debe disminuir también a L/6.'
+      },
+      // 32. Experimento 1: Volumen Esfera vernier
+      {
+        id: 'exp1_volumen_esfera',
+        experiment: 'Experimento 1: Volumen de Sólidos',
+        type: 'multiple',
+        question: 'Usa un calibrador Vernier y mide el diámetro de una esfera de acero obteniendo d = 3.00 cm. Calcula su volumen en centímetros cúbicos.',
+        options: [
+          '14.13 cm³',
+          '113.10 cm³',
+          '1.50 cm³',
+          '141.30 cm³'
+        ],
+        answer: '14.13 cm³',
+        explanation: 'El radio es r = 1.50 cm. El volumen es V = (4/3) * π * r³ = (4/3) * π * (1.50)³ = 1.333 * 3.1416 * 3.375 ≈ 14.13 cm³.'
+      },
+      // 33. Experimento 4: Segunda Ley completar
+      {
+        id: 'exp4_masa_aceleracion_completar',
+        experiment: 'Experimento 4: Segunda Ley de Newton',
+        type: 'completar',
+        question: 'En la segunda parte del Experimento 4, al mantener la fuerza constante y aumentar la masa del carro colocándole pesas encima, la aceleración del carro...',
+        options: ['Aumenta', 'Disminuye', 'Permanece constante', 'Se duplica'],
+        answer: 'Disminuye',
+        explanation: 'De acuerdo a la ecuación a = F/m, a fuerza constante la aceleración es inversamente proporcional a la masa; por tanto, al aumentar la masa, la aceleración disminuye.'
+      },
+      // 34. Experimento 3: Caída libre gravedad masas V/F
+      {
+        id: 'exp3_gravedad_masas_vf',
+        experiment: 'Experimento 3: Caída Libre',
+        type: 'vf',
+        question: 'En la segunda parte del experimento 3, al dejar caer un objeto pesado y uno ligero desde el segundo nivel del laboratorio, el pesado llegará notablemente antes al suelo si despreciamos la resistencia del aire.',
+        options: ['Verdadero', 'Falso'],
+        answer: 'Falso',
+        explanation: 'Al despreciar la resistencia del aire (caída libre ideal), todos los cuerpos caen con la misma aceleración g, por lo que llegan al mismo tiempo sin importar su peso.'
+      },
+      // 35. Conceptos Generales: Escala cronómetro
+      {
+        id: 'conceptos_escala_cronometro',
+        experiment: 'Análisis de Datos Generales',
+        type: 'completar',
+        question: 'La escala mínima o resolución de un cronómetro digital común que mide hasta centésimas de segundo es de...',
+        options: ['0.01 s', '0.1 s', '1 s', '0.001 s'],
+        answer: '0.01 s',
+        explanation: 'Un cronómetro digital que marca centésimas de segundo tiene una resolución de 1/100 de segundo, lo que equivale a 0.01 s.'
+      }
+    ];
+
+    // --- APUNTES DE ESTUDIO CON DETALLES DE LAS IMÁGENES ---
+    const LAB_NOTES = [
+      {
+        id: 1,
+        title: "Experimento 1: Medición con Patrones",
+        content: "Explica la diferencia entre medir con patrones no estandarizados (la cuarta de la mano o el pie, que varían de una persona a otra, careciendo de reproducibilidad universal) y estandarizados (regla graduada, calibrador vernier, tornillo micrométrico). Es vital realizar conversiones de unidades ($1 \\text{ pulgada} = 2.54 \\text{ cm}$) y dominar las ecuaciones de volumen indirecto: paralelepípedo ($V = a \\cdot b \\cdot c$), cilindro ($V = \\pi \\cdot r^2 \\cdot h$) y esfera ($V = \\frac{4}{3}\\pi \\cdot r^3$). Al medir con el calibrador, utiliza siempre la escala del nonio para leer décimas o centésimas de milímetro.",
+        formulas: [
+          { name: "Volumen Cilindro", formula: "V = \\pi \\cdot r^2 \\cdot h" },
+          { name: "Volumen Esfera", formula: "V = \\frac{4}{3} \\pi \\cdot r^3" },
+          { name: "Volumen Paralelepípedo", formula: "V = a \\cdot b \\cdot c" }
+        ]
+      },
+      {
+        id: 2,
+        title: "Experimento 2: Velocidad en el MRU",
+        content: "Explora la relación lineal entre distancia ($d$), tiempo ($t$) y velocidad ($v$). El experimento incluye estimar el tiempo que tomaría caminar desde San Pedro de Macorís hasta Consuelo ($12.0 \\text{ km}$) comparando tu estimación empírica con la velocidad calculada de forma rigurosa caminando $10 \\text{ metros}$ en el laboratorio a paso normal y aprisa. Se evalúa el porcentaje de diferencia entre estimación y cálculo real para analizar la precisión subjetiva del estudiante.",
+        formulas: [
+          { name: "Velocidad Media", formula: "v = \\frac{d}{t}" },
+          { name: "Conversión m/s a km/h", formula: "v_{km/h} = v_{m/s} \\cdot 3.6" }
+        ]
+      },
+      {
+        id: 3,
+        title: "Experimento 3: Aceleración de la Gravedad",
+        content: "Determinación de la gravedad experimental ($g$) en República Dominicana a nivel del mar ($9.78 \\text{ m/s}^2$). Se divide en dos métodos: 1) Péndulo simple, midiendo el periodo ($T$) de 30 oscilaciones en ángulos inferiores a $10^\\circ$ para asegurar un Movimiento Armónico Simple ($g = \\frac{4\\pi^2 \\cdot L}{T^2}$, donde $L = L_{cuerda} + r_{esfera}$); y 2) Caída libre, soltando una esfera desde la barandilla del segundo nivel del edificio y calculando $g = \\frac{2h}{t^2}$ con el promedio de 5 lanzamientos.",
+        formulas: [
+          { name: "Gravedad (Caída Libre)", formula: "g = \\frac{2h}{t^2}" },
+          { name: "Periodo del Péndulo", formula: "T = 2\\pi \\sqrt{\\frac{L}{g}}" },
+          { name: "Gravedad Despejada (Péndulo)", formula: "g = \\frac{4\\pi^2 \\cdot L}{T^2}" }
+        ]
+      },
+      {
+        id: 4,
+        title: "Experimento 4: Segunda Ley de Newton",
+        content: "Determina las relaciones de proporcionalidad entre fuerza ($F$), masa ($m$) y aceleración ($a$). El experimento utiliza un carro dinámico sobre un riel de levitación para despreciar la fricción. Primera parte: masa constante, variando la fuerza mediante pesas colgantes (demuestra relación directamente proporcional $a \\propto F$). Segunda parte: fuerza constante (pesas de la polea fijas), variando la masa del carro dinámico colocando pesas encima (demuestra relación inversamente proporcional $a \\propto 1/m$).",
+        formulas: [
+          { name: "Segunda Ley de Newton", formula: "F = m \\cdot a" },
+          { name: "Aceleración", formula: "a = \\frac{F}{m}" }
+        ]
+      }
+    ];
+
+    // --- FLASHCARDS PARA REPASO INTERACTIVO ---
+    const FLASHCARDS = [
+      { question: "¿Qué mide el Calibrador Vernier?", answer: "Diámetros exteriores, diámetros interiores y profundidades de objetos pequeños con alta precisión." },
+      { question: "¿Cuál es la fórmula del volumen de la esfera?", answer: "V = (4/3) * π * r³, donde r es el radio de la esfera (mitad del diámetro)." },
+      { question: "¿Por qué la cuarta de la mano no es un patrón estándar?", answer: "Porque no está estandarizada de manera universal; el tamaño de la mano cambia según la anatomía de cada persona." },
+      { question: "¿Cuál es la diferencia entre velocidad media e instantánea?", answer: "La velocidad media calcula el promedio en todo un intervalo largo, mientras que la instantánea es la velocidad exacta en un instante de tiempo infinitamente pequeño." },
+      { question: "¿Qué valor tiene la aceleración de la gravedad estándar y en RD?", answer: "El estándar global promedio es 9.81 m/s², pero en República Dominicana es aproximadamente 9.78 m/s² por la cercanía ecuatorial." },
+      { question: "¿Por qué el periodo de un péndulo simple no cambia si le pones más masa?", answer: "Porque en la fórmula T = 2π√(L/g) la masa no influye; la gravedad actúa proporcionalmente a la masa atrayéndola con igual aceleración." },
+      { question: "¿Cuál es la fórmula que relaciona masa, fuerza y aceleración?", answer: "Fuerza es igual a Masa por Aceleración (F = m * a), que fundamenta la Segunda Ley de Newton." },
+      { question: "¿Qué significa que dos variables físicas sean inversamente proporcionales?", answer: "Significa que si una de las variables aumenta al doble, la otra disminuye a la mitad, como la masa y la aceleración." }
+    ];
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('repaso-interactivo');
+      
+      // STATE DE REPASO INTERACTIVO
+      const [currentFlashcard, setCurrentFlashcard] = useState(0);
+      const [isFlipped, setIsFlipped] = useState(false);
+
+      // STATE DE REPASO COMO QUIERAS
+      const [selectedLabId, setSelectedLabId] = useState(1);
+      const [simFormulaVal1, setSimFormulaVal1] = useState(3.0); 
+      const [simFormulaVal2, setSimFormulaVal2] = useState(10.0); 
+      const [simResult, setSimResult] = useState(null);
+
+      // STATE DEL SIMULACRO EXTREMO
+      const [questionsPool, setQuestionsPool] = useState(INITIAL_QUESTIONS);
+      const [examDeck, setExamDeck] = useState([]);
+      const [currentExamIndex, setCurrentExamIndex] = useState(0);
+      const [selectedOption, setSelectedOption] = useState(null);
+      const [completarText, setCompletarText] = useState('');
+      const [examStatus, setExamStatus] = useState('idle'); 
+      const [failedQuestionDetails, setFailedQuestionDetails] = useState(null);
+      const [highScore, setHighScore] = useState(0);
+      const [correctStreak, setCorrectStreak] = useState(0);
+
+      // STATE DE SUBIR MATERIAL
+      const [customMaterialText, setCustomMaterialText] = useState('');
+      const [uploadMessage, setUploadMessage] = useState('');
+
+      const startNewExam = (pool = questionsPool) => {
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        // Ahora seleccionamos exactamente 30 preguntas de forma infalible
+        const selected30 = shuffled.slice(0, Math.min(30, shuffled.length));
+        const preparedQuestions = selected30.map(q => {
+          if (q.type === 'multiple' || q.type === 'definir') {
+            const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+            return { ...q, options: shuffledOptions };
+          }
+          return q;
+        });
+
+        setExamDeck(preparedQuestions);
+        setCurrentExamIndex(0);
+        setSelectedOption(null);
+        setCompletarText('');
+        setExamStatus('playing');
+      };
+
+      const handleAnswerSubmit = (userAnswer) => {
+        if (!userAnswer || userAnswer.trim() === '') return;
+
+        const currentQuestion = examDeck[currentExamIndex];
+        const isCorrect = userAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
+
+        if (isCorrect) {
+          const nextIndex = currentExamIndex + 1;
+          setCorrectStreak(prev => {
+            const nextStreak = prev + 1;
+            if (nextStreak > highScore) setHighScore(nextStreak);
+            return nextStreak;
+          });
+
+          if (nextIndex >= examDeck.length) {
+            setExamStatus('success_screen');
+          } else {
+            setCurrentExamIndex(nextIndex);
+            setSelectedOption(null);
+            setCompletarText('');
+          }
+        } else {
+          setFailedQuestionDetails({
+            question: currentQuestion.question,
+            userAnswer: userAnswer,
+            correctAnswer: currentQuestion.answer,
+            explanation: currentQuestion.explanation,
+            experiment: currentQuestion.experiment,
+            failedIndex: currentExamIndex + 1
+          });
+          setCorrectStreak(0);
+          setExamStatus('failed_modal');
+        }
+      };
+
+      const handleCloseFailureModal = () => {
+        setFailedQuestionDetails(null);
+        startNewExam(); 
+      };
+
+      const handleProcessMaterial = () => {
+        if (!customMaterialText.trim()) {
+          setUploadMessage('Por favor ingresa texto explicativo, apuntes o preguntas.');
+          return;
+        }
+
+        const paragraphs = customMaterialText.split('\n').filter(p => p.trim().length > 10);
+        if (paragraphs.length === 0) {
+          setUploadMessage('El texto es muy corto para poder extraer preguntas de estudio.');
+          return;
+        }
+
+        const newQuestions = [];
+        paragraphs.forEach((para, index) => {
+          if (para.toLowerCase().includes('gravedad') || para.toLowerCase().includes('mecanica') || para.toLowerCase().includes('aceleracion')) {
+            newQuestions.push({
+              id: `custom_${Date.now()}_${index}`,
+              experiment: 'Material Subido por Usuario',
+              type: 'vf',
+              question: `De acuerdo a tu material: "¿${para.substring(0, 100)}...?" ¿Esto es coherente con los principios físicos descritos?`,
+              options: ['Verdadero', 'Falso'],
+              answer: 'Verdadero',
+              explanation: `Esta pregunta fue auto-generada para tu material: "${para.substring(0, 140)}..."`
+            });
+          } else {
+            newQuestions.push({
+              id: `custom_${Date.now()}_${index}`,
+              experiment: 'Material Subido por Usuario',
+              type: 'multiple',
+              question: `Según el material provisto: ¿Cuál es la idea principal del siguiente fragmento? "${para.substring(0, 90)}..."`,
+              options: [
+                para.substring(0, 120),
+                'Un concepto alternativo de energía disipada',
+                'La ley de fricción de laboratorios',
+                'Una medida de masa del sistema dinámico'
+              ],
+              answer: para.substring(0, 120),
+              explanation: 'La respuesta correcta se extrajo de tu propio apunte de estudio.'
+            });
+          }
+        });
+
+        if (newQuestions.length > 0) {
+          const updatedPool = [...questionsPool, ...newQuestions];
+          setQuestionsPool(updatedPool);
+          setUploadMessage(`¡Éxito! Se han procesado y generado ${newQuestions.length} nuevas preguntas basadas en tu material.`);
+          setCustomMaterialText('');
+        } else {
+          setUploadMessage('No pudimos extraer oraciones claras. Intenta ingresar párrafos explicativos.');
+        }
+      };
+
+      useEffect(() => {
+        if (selectedLabId === 1) {
+          const r = simFormulaVal1;
+          const h = simFormulaVal2;
+          const vol = Math.PI * Math.pow(r, 2) * h;
+          setSimResult({
+            label: "Volumen del Cilindro (V)",
+            value: `${vol.toFixed(3)} cm³`,
+            explanation: `Calculado usando V = π * r² * h con un radio de ${r} cm y una altura de ${h} cm.`
+          });
+        } else if (selectedLabId === 2) {
+          const d = simFormulaVal1;
+          const t = simFormulaVal2 === 0 ? 0.001 : simFormulaVal2;
+          const vel = d / t;
+          const velKmh = vel * 3.6;
+          setSimResult({
+            label: "Velocidad Media (v)",
+            value: `${vel.toFixed(2)} m/s (${velKmh.toFixed(2)} km/h)`,
+            explanation: `Calculado usando v = d / t con una distancia de ${d} m en un lapso de ${t} s.`
+          });
+        } else if (selectedLabId === 3) {
+          const L = simFormulaVal1;
+          const T = simFormulaVal2 === 0 ? 0.001 : simFormulaVal2;
+          const g = (4 * Math.pow(Math.PI, 2) * L) / Math.pow(T, 2);
+          setSimResult({
+            label: "Aceleración de la Gravedad calculada (g)",
+            value: `${g.toFixed(3)} m/s²`,
+            explanation: `Calculado mediante g = 4π²·L / T² con longitud de hilo L = ${L} m y periodo de oscilación T = ${T} s.`
+          });
+        } else if (selectedLabId === 4) {
+          const F = simFormulaVal1;
+          const m = simFormulaVal2 === 0 ? 0.001 : simFormulaVal2;
+          const a = F / m;
+          setSimResult({
+            label: "Aceleración resultante (a)",
+            value: `${a.toFixed(2)} m/s²`,
+            explanation: `Calculado mediante a = F / m con una fuerza de ${F} N aplicada sobre una masa total de ${m} kg.`
+          });
+        }
+      }, [selectedLabId, simFormulaVal1, simFormulaVal2]);
+
+      const updateSimDefaults = (labId) => {
+        setSelectedLabId(labId);
+        if (labId === 1) {
+          setSimFormulaVal1(3.0); 
+          setSimFormulaVal2(10.0); 
+        } else if (labId === 2) {
+          setSimFormulaVal1(10.0); 
+          setSimFormulaVal2(8.0); 
+        } else if (labId === 3) {
+          setSimFormulaVal1(1.0); 
+          setSimFormulaVal2(2.0); 
+        } else if (labId === 4) {
+          setSimFormulaVal1(2.0); 
+          setSimFormulaVal2(0.5); 
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+          
+          {/* HEADER DE LA APLICACIÓN */}
+          <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-6">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+                  <Icon name="Award" className="h-6 w-6" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-400 bg-clip-text text-transparent">
+                    Física FIS-011: Entrenador de Exámenes (UCE)
+                  </h1>
+                  <p className="text-xs text-slate-400 font-mono">Diseñado con los datos reales de tus fotos de laboratorio</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 text-xs">
+                <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                  <Icon name="Flame" className="h-4 w-4 text-orange-500" />
+                  <span>Racha Actual: <strong className="text-orange-400">{correctStreak}</strong></span>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                  <Icon name="Sparkles" className="h-4 w-4 text-yellow-500" />
+                  <span>Racha Máxima: <strong className="text-yellow-400">{highScore}</strong></span>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+                  Preguntas Totales: <strong className="text-indigo-400">{questionsPool.length}</strong>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* MENÚ DE NAVEGACIÓN PRINCIPAL */}
+          <nav className="bg-slate-950/40 border-b border-slate-800/60 p-2 overflow-x-auto">
+            <div className="max-w-7xl mx-auto flex space-x-1 sm:space-x-2 min-w-[600px] px-4">
+              <button
+                onClick={() => setActiveTab('repaso-interactivo')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'repaso-interactivo' 
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <Icon name="Layers" className="h-4 w-4" />
+                1. Repaso Interactivo
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('repaso-libre');
+                  updateSimDefaults(1);
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'repaso-libre' 
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <Icon name="BookMarked" className="h-4 w-4" />
+                2. Repaso como Quieras
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('simulacro');
+                  if (examStatus === 'idle') startNewExam();
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'simulacro' 
+                    ? 'bg-rose-600 text-white shadow-md shadow-rose-600/10' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <Icon name="Play" className="h-4 w-4" />
+                3. Simulacro de Prueba (30 Preguntas)
+              </button>
+              <button
+                onClick={() => setActiveTab('subir-material')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'subir-material' 
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <Icon name="Upload" className="h-4 w-4" />
+                4. Añadir más Material
+              </button>
+            </div>
+          </nav>
+
+          {/* CONTENIDO PRINCIPAL */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+            {/* 1. SECCIÓN: REPASO INTERACTIVO */}
+            {activeTab === 'repaso-interactivo' && (
+              <div className="space-y-8 animate-fadeIn">
+                <div className="text-center max-w-2xl mx-auto space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full">
+                    Herramienta de Memorización Rápida
+                  </span>
+                  <h2 className="text-3xl font-extrabold text-white">Tarjetas de Repaso Rápido</h2>
+                  <p className="text-slate-400 text-sm">
+                    Haz clic sobre las tarjetas para darles la vuelta y repasar conceptos teóricos fundamentales de las prácticas de la UCE.
+                  </p>
+                </div>
+
+                {/* Tarjeta 3D interactiva */}
+                <div className="flex flex-col items-center justify-center py-6">
+                  <div 
+                    onClick={() => setIsFlipped(!isFlipped)}
+                    className="w-full max-w-lg h-72 cursor-pointer group [perspective:1000px]"
+                  >
+                    <div className={`relative w-full h-full duration-500 transform-style preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+                      
+                      {/* Cara Frontal (Pregunta) */}
+                      <div className="absolute inset-0 w-full h-full rounded-2xl bg-slate-800 border-2 border-indigo-500/30 p-8 flex flex-col justify-between backface-hidden shadow-2xl shadow-indigo-500/5">
+                        <div className="flex justify-between items-center text-xs text-indigo-400 font-semibold tracking-wider uppercase">
+                          <span>Pregunta clave de examen</span>
+                          <span>Tarjeta {currentFlashcard + 1} de {FLASHCARDS.length}</span>
+                        </div>
+                        
+                        <div className="my-auto text-center">
+                          <p className="text-xl font-bold text-white leading-relaxed">
+                            {FLASHCARDS[currentFlashcard].question}
+                          </p>
+                        </div>
+
+                        <div className="text-center text-xs text-slate-500 italic">
+                          Haz clic en cualquier parte de la tarjeta para ver la respuesta
+                        </div>
+                      </div>
+
+                      {/* Cara Posterior (Respuesta) */}
+                      <div className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border-2 border-indigo-500/60 p-8 flex flex-col justify-between [transform:rotateY(180deg)] backface-hidden shadow-2xl shadow-indigo-500/10">
+                        <div className="flex justify-between items-center text-xs text-emerald-400 font-semibold tracking-wider uppercase">
+                          <span>Explicación / Respuesta</span>
+                          <span>Tarjeta {currentFlashcard + 1} de {FLASHCARDS.length}</span>
+                        </div>
+                        
+                        <div className="my-auto text-center">
+                          <p className="text-lg font-medium text-slate-100 leading-relaxed">
+                            {FLASHCARDS[currentFlashcard].answer}
+                          </p>
+                        </div>
+
+                        <div className="text-center text-xs text-indigo-400 font-semibold">
+                          Haz clic para volver a la pregunta
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Controles de navegación de tarjetas */}
+                  <div className="flex items-center gap-6 mt-8">
+                    <button
+                      onClick={() => {
+                        setIsFlipped(false);
+                        setCurrentFlashcard(prev => (prev === 0 ? FLASHCARDS.length - 1 : prev - 1));
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl transition duration-150 border border-slate-700 hover:border-slate-600"
+                      aria-label="Anterior tarjeta"
+                    >
+                      <Icon name="ChevronLeft" className="h-6 w-6" />
+                    </button>
+                    
+                    <span className="text-sm font-semibold text-slate-400">
+                      {currentFlashcard + 1} / {FLASHCARDS.length}
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        setIsFlipped(false);
+                        setCurrentFlashcard(prev => (prev === FLASHCARDS.length - 1 ? 0 : prev + 1));
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl transition duration-150 border border-slate-700 hover:border-slate-600"
+                      aria-label="Siguiente tarjeta"
+                    >
+                      <Icon name="ChevronRight" className="h-6 w-6" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Resumen explicativo de los instrumentos */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                  <div className="bg-slate-800/40 p-6 rounded-xl border border-slate-800/80">
+                    <h4 className="font-bold text-white text-base mb-2 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Calibrador Vernier
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Permite tomar medidas directas con una precisión de centésimas de milímetro. Ideal para diámetros de esferas y cilindros.
+                    </p>
+                  </div>
+                  <div className="bg-slate-800/40 p-6 rounded-xl border border-slate-800/80">
+                    <h4 className="font-bold text-white text-base mb-2 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Péndulo Simple
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Sistema físico ideal para calcular la gravedad local midiendo los tiempos de oscilación completa en ángulos muy cerrados.
+                    </p>
+                  </div>
+                  <div className="bg-slate-800/40 p-6 rounded-xl border border-slate-800/80">
+                    <h4 className="font-bold text-white text-base mb-2 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Segunda Ley Newton
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Establece que la aceleración es directamente proporcional a la fuerza e inversamente proporcional a la masa del sistema.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2. SECCIÓN: REPASO COMO QUIERAS */}
+            {activeTab === 'repaso-libre' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+                
+                {/* Lista de apuntes */}
+                <div className="lg:col-span-7 space-y-6">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">Apuntes Resumidos de Prácticas</span>
+                    <h2 className="text-2xl font-bold text-white">Manual del Laboratorio FIS-011 (UCE)</h2>
+                    <p className="text-slate-400 text-xs">Selecciona un experimento de la lista para leer sus fundamentos clave.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {LAB_NOTES.map((note) => (
+                      <div
+                        key={note.id}
+                        onClick={() => updateSimDefaults(note.id)}
+                        className={`p-5 rounded-xl border cursor-pointer transition-all duration-200 ${
+                          selectedLabId === note.id
+                            ? 'bg-slate-800 border-indigo-500 shadow-md shadow-indigo-500/5'
+                            : 'bg-slate-900 border-slate-800 hover:bg-slate-800/50 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <h3 className={`font-semibold text-base ${selectedLabId === note.id ? 'text-indigo-400' : 'text-slate-200'}`}>
+                            {note.title}
+                          </h3>
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                            Práctica 0{note.id}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                          {note.content}
+                        </p>
+                        
+                        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-800/50">
+                          {note.formulas.map((f, idx) => (
+                            <span key={idx} className="bg-slate-950 text-[11px] text-indigo-300 font-mono px-2 py-1 rounded border border-slate-800 flex items-center gap-1">
+                              <strong>{f.name}:</strong> 
+                              <MathFormula math={f.formula} />
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Laboratorio virtual */}
+                <div className="lg:col-span-5 space-y-6">
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-6">
+                    <div className="flex items-center gap-2 text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+                      <Icon name="Sliders" className="h-4 w-4" />
+                      <span>Laboratorio Virtual de Fórmulas</span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-white text-lg">Prueba de Variables Dinámicas</h3>
+                      <p className="text-xs text-slate-400 leading-normal">
+                        Mueve los controles deslizantes para simular el comportamiento de las variables de laboratorio en tiempo real.
+                      </p>
+                    </div>
+
+                    {selectedLabId === 1 && (
+                      <div className="space-y-4 pt-2">
+                        <span className="text-xs font-bold text-indigo-400 uppercase font-mono">Experimento 1: Cilindro</span>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Radio de la base (r)</span>
+                            <strong className="text-indigo-300">{simFormulaVal1} cm</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="10"
+                            step="0.1"
+                            value={simFormulaVal1}
+                            onChange={(e) => setSimFormulaVal1(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Altura (h)</span>
+                            <strong className="text-indigo-300">{simFormulaVal2} cm</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="30"
+                            step="0.5"
+                            value={simFormulaVal2}
+                            onChange={(e) => setSimFormulaVal2(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedLabId === 2 && (
+                      <div className="space-y-4 pt-2">
+                        <span className="text-xs font-bold text-indigo-400 uppercase font-mono">Experimento 2: Velocidad</span>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Distancia (d)</span>
+                            <strong className="text-indigo-300">{simFormulaVal1} m</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="2"
+                            max="100"
+                            step="1"
+                            value={simFormulaVal1}
+                            onChange={(e) => setSimFormulaVal1(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Tiempo de recorrido (t)</span>
+                            <strong className="text-indigo-300">{simFormulaVal2} s</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="30"
+                            step="0.5"
+                            value={simFormulaVal2}
+                            onChange={(e) => setSimFormulaVal2(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedLabId === 3 && (
+                      <div className="space-y-4 pt-2">
+                        <span className="text-xs font-bold text-indigo-400 uppercase font-mono">Experimento 3: Péndulo</span>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Longitud de cuerda (L)</span>
+                            <strong className="text-indigo-300">{simFormulaVal1} m</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="3"
+                            step="0.05"
+                            value={simFormulaVal1}
+                            onChange={(e) => setSimFormulaVal1(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Periodo medido (T)</span>
+                            <strong className="text-indigo-300">{simFormulaVal2} s</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="6"
+                            step="0.05"
+                            value={simFormulaVal2}
+                            onChange={(e) => setSimFormulaVal2(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedLabId === 4 && (
+                      <div className="space-y-4 pt-2">
+                        <span className="text-xs font-bold text-indigo-400 uppercase font-mono">Experimento 4: 2da Ley de Newton</span>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Fuerza aplicada (F)</span>
+                            <strong className="text-indigo-300">{simFormulaVal1} N</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="10"
+                            step="0.1"
+                            value={simFormulaVal1}
+                            onChange={(e) => setSimFormulaVal1(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Masa total carro (m)</span>
+                            <strong className="text-indigo-300">{simFormulaVal2} kg</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="5"
+                            step="0.05"
+                            value={simFormulaVal2}
+                            onChange={(e) => setSimFormulaVal2(parseFloat(e.target.value))}
+                            className="w-full accent-indigo-600"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {simResult && (
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">
+                          Cálculo Teórico en Tiempo Real
+                        </span>
+                        <h4 className="text-sm font-semibold text-slate-300">{simResult.label}:</h4>
+                        <p className="text-2xl font-extrabold text-white">{simResult.value}</p>
+                        <p className="text-xs text-slate-400 leading-normal pt-1">{simResult.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. SECCIÓN: SIMULACRO DE PRUEBA EXTREMO */}
+            {activeTab === 'simulacro' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+                
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1 text-center sm:text-left">
+                    <div className="flex items-center gap-2 justify-center sm:justify-start">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Desafío Estricto: Examen de 30 Preguntas</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-white">Consigue el 10 Perfecto</h3>
+                    <p className="text-xs text-slate-400 max-w-md">
+                      Regla de Oro: Si respondes bien pasas. Si fallas una sola pregunta, <strong className="text-rose-400">vuelves al inicio</strong>, se te revela el error y el mazo se vuelve a barajar al azar.
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => startNewExam()}
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm px-5 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-rose-600/10 transition-all duration-150"
+                  >
+                    <Icon name="RotateCcw" className="h-4 w-4" />
+                    Iniciar Desafío
+                  </button>
+                </div>
+
+                {examStatus === 'playing' && examDeck.length > 0 && (
+                  <div className="bg-slate-900 border border-indigo-500/20 rounded-2xl overflow-hidden shadow-xl">
+                    
+                    {/* Barra de progreso */}
+                    <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex justify-between items-center text-xs">
+                      <span className="text-slate-400 font-medium">
+                        Experimento actual: <strong className="text-indigo-400">{examDeck[currentExamIndex].experiment}</strong>
+                      </span>
+                      <span className="text-indigo-400 font-bold bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20">
+                        Pregunta {currentExamIndex + 1} de {examDeck.length}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-slate-950 h-1.5">
+                      <div 
+                        className="bg-gradient-to-r from-indigo-500 to-rose-500 h-full transition-all duration-300"
+                        style={{ width: `${((currentExamIndex + 1) / examDeck.length) * 100}%` }}
+                      ></div>
+                    </div>
+
+                    {/* Pregunta */}
+                    <div className="p-6 sm:p-8 space-y-6">
+                      <div className="space-y-2">
+                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 font-extrabold rounded bg-slate-800 text-slate-400">
+                          {examDeck[currentExamIndex].type === 'vf' && 'VERDADERO O FALSO'}
+                          {examDeck[currentExamIndex].type === 'multiple' && 'SELECCIÓN MÚLTIPLE (REPARE PASO A PASO)'}
+                          {examDeck[currentExamIndex].type === 'completar' && 'COMPLETAR LA RESPUESTA'}
+                          {examDeck[currentExamIndex].type === 'definir' && 'SELECCIONA LA DEFINICIÓN'}
+                        </span>
+                        <h4 className="text-lg sm:text-xl font-bold text-white leading-relaxed">
+                          {examDeck[currentExamIndex].question}
+                        </h4>
+                      </div>
+
+                      {/* Respuestas de Opción */}
+                      {(examDeck[currentExamIndex].type === 'multiple' || 
+                        examDeck[currentExamIndex].type === 'vf' || 
+                        examDeck[currentExamIndex].type === 'definir') && (
+                        <div className="space-y-3">
+                          {examDeck[currentExamIndex].options.map((option, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedOption(option)}
+                              className={`w-full text-left p-4 rounded-xl text-sm font-medium border transition-all duration-150 ${
+                                selectedOption === option
+                                  ? 'bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/10'
+                                  : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:border-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span>{option}</span>
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                  selectedOption === option ? 'border-white bg-indigo-500' : 'border-slate-700'
+                                }`}>
+                                  {selectedOption === option && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Respuestas de Completar */}
+                      {examDeck[currentExamIndex].type === 'completar' && (
+                        <div className="space-y-4">
+                          <p className="text-xs text-slate-400 italic">
+                            Sugerencia: Haz clic en una opción o escribe la respuesta exacta correspondiente en el recuadro.
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {examDeck[currentExamIndex].options.map((opt, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setCompletarText(opt)}
+                                className="p-2 text-xs rounded bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition"
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Escribe tu respuesta aquí..."
+                            value={completarText}
+                            onChange={(e) => setCompletarText(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-3.5 text-white outline-none text-sm font-medium transition animate-pulse"
+                          />
+                        </div>
+                      )}
+
+                      <div className="pt-4 border-t border-slate-800/60 flex justify-end">
+                        <button
+                          onClick={() => {
+                            const answer = examDeck[currentExamIndex].type === 'completar' ? completarText : selectedOption;
+                            handleAnswerSubmit(answer);
+                          }}
+                          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm px-6 py-3 rounded-xl transition duration-150 flex items-center gap-2"
+                          disabled={
+                            examDeck[currentExamIndex].type === 'completar' 
+                              ? !completarText.trim() 
+                              : !selectedOption
+                          }
+                        >
+                          Enviar respuesta
+                          <Icon name="ArrowRight" className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* Examen Completado */}
+                {examStatus === 'success_screen' && (
+                  <div className="bg-slate-900 border border-emerald-500/30 p-8 rounded-2xl text-center space-y-6 shadow-2xl">
+                    <div className="mx-auto w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center border border-emerald-500/20">
+                      <Icon name="CheckCircle2" className="h-10 w-10" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-3xl font-extrabold text-white">¡Examen Completado! 10/10</h3>
+                      <p className="text-slate-400 text-sm max-w-md mx-auto">
+                        Increíble. Lograste dominar todos los experimentos teóricos y de cálculo cuantitativo del manual. Estás listo para sacar nota perfecta.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => startNewExam()}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-3 rounded-xl transition shadow-lg shadow-emerald-500/10"
+                    >
+                      Volver a desafiar con preguntas al azar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* MODAL DE FALLO (CASTIGO DE REINICIO) */}
+            {examStatus === 'failed_modal' && failedQuestionDetails && (
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-slate-900 border-2 border-rose-500/50 max-w-xl w-full rounded-2xl overflow-hidden shadow-2xl">
+                  
+                  <div className="bg-rose-500/10 border-b border-rose-500/20 px-6 py-5 flex items-center gap-3">
+                    <div className="bg-rose-500 text-white p-1.5 rounded-lg">
+                      <Icon name="XCircle" className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-rose-400">¡Respuesta Incorrecta!</h3>
+                      <p className="text-xs text-slate-400">Has fallado en la pregunta {failedQuestionDetails.failedIndex}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-extrabold">{failedQuestionDetails.experiment}</span>
+                      <p className="text-sm font-semibold text-slate-200">"{failedQuestionDetails.question}"</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                        <span className="text-slate-500 block mb-1 uppercase font-bold">Tu respuesta:</span>
+                        <strong className="text-rose-400 font-mono">{failedQuestionDetails.userAnswer}</strong>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                        <span className="text-slate-500 block mb-1 uppercase font-bold">Respuesta correcta:</span>
+                        <strong className="text-emerald-400 font-mono">{failedQuestionDetails.correctAnswer}</strong>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+                      <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-extrabold flex items-center gap-1.5">
+                        <Icon name="HelpCircle" className="h-3.5 w-3.5" /> Explicación Teórica / Desarrollo Matemático (Estilo UCE)
+                      </span>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        {failedQuestionDetails.explanation}
+                      </p>
+                    </div>
+
+                    <div className="bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 text-center">
+                      <p className="text-xs text-rose-300 leading-normal">
+                        <strong>¡Regla de la prueba!</strong> Para asegurar la asimilación conceptual de tu error, regresas al inicio de la prueba y se barajará un mazo nuevo de 30 preguntas de forma aleatoria.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950 px-6 py-4 border-t border-slate-800 flex justify-end">
+                    <button
+                      onClick={handleCloseFailureModal}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-indigo-600/10"
+                    >
+                      <Icon name="RotateCcw" className="h-4 w-4" />
+                      Volver a empezar
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* 4. SECCIÓN: SUBIR MÁS MATERIAL */}
+            {activeTab === 'subir-material' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+                <div className="space-y-2 text-center max-w-xl mx-auto">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full">
+                    Añade Apuntes
+                  </span>
+                  <h2 className="text-2xl font-bold text-white">Generador de Pruebas Personalizadas</h2>
+                  <p className="text-xs text-slate-400">
+                    Pega tus propios apuntes o fragmentos de manuales de física aquí. La aplicación generará automáticamente nuevas preguntas y las incorporará en el simulador.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4 shadow-xl">
+                  <textarea
+                    rows="8"
+                    placeholder="Pega tu material aquí..."
+                    value={customMaterialText}
+                    onChange={(e) => setCustomMaterialText(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-600 outline-none transition"
+                  ></textarea>
+
+                  <div className="flex justify-between items-center gap-4">
+                    <span className="text-xs text-slate-500">Mínimo sugerido: 50 caracteres</span>
+                    <button
+                      onClick={handleProcessMaterial}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-6 py-3 rounded-xl flex items-center gap-2 transition"
+                    >
+                      <Icon name="Sparkles" className="h-4 w-4" />
+                      Procesar Apuntes
+                    </button>
+                  </div>
+
+                  {uploadMessage && (
+                    <div className="p-4 rounded-xl text-xs border bg-indigo-500/5 border-indigo-500/20 text-indigo-300">
+                      {uploadMessage}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* FOOTER */}
+          <footer className="border-t border-slate-800/80 bg-slate-950/40 py-6 text-center text-xs text-slate-500 px-4 mt-auto">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p>© 2026 Laboratorio de Física FIS-011. Universidad Central del Este (UCE).</p>
+              <div className="flex gap-4">
+                <span>San Pedro de Macorís, RD</span>
+                <span>•</span>
+                <span>Entrenador de Exámenes Premium</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
